@@ -1,5 +1,7 @@
 # 烟花模拟器
 
+https://github.com/NianBroken
+
 ## 预览
 
 Demo 1：https://nianbroken.github.io/Firework_Simulator/
