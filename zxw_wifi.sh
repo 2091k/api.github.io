@@ -22,7 +22,7 @@ echo -e "${GREEN}登录成功！正在获取设备信息...${NC}"
 echo
 
 # 获取设备信息
-response=$(curl -s 'http://m.home/reqproc/proc_get?multi_data=1&cmd=network_provider,lte_band,lte_rsrp,imei,ziccid,battery_pers,battery_charging,sta_count,wifi_cur_state,data_volume_limit_switch,cr_version,hw_version')
+response=$(curl -s 'http://m.home/reqproc/proc_get?multi_data=1&cmd=network_provider,lte_band,lte_rsrp,imei,ziccid,battery_pers,battery_charging,sta_count,wifi_cur_state,data_volume_limit_switch,cr_version,hw_version,lan_ipaddr,SSID1,realtime_time')
 
 if [ -z "$response" ]; then
   echo -e "${RED}未能获取设备信息，请检查网络或设备状态。${NC}"
@@ -33,6 +33,16 @@ fi
 network_provider=$(echo "$response" | grep -o '"network_provider":"[^"]*"' | cut -d':' -f2 | tr -d '"')
 lte_rsrp=$(echo "$response" | grep -o '"lte_rsrp":"[^"]*"' | cut -d':' -f2 | tr -d '"')
 lte_band=$(echo "$response" | grep -o '"lte_band":"[^"]*"' | cut -d':' -f2 | tr -d '"')
+
+# 提取并显示局域网IP地址、SSID名称和开机时长
+lan_ipaddr=$(echo "$response" | grep -o '"lan_ipaddr":"[^"]*"' | cut -d':' -f2 | tr -d '"')
+SSID1=$(echo "$response" | grep -o '"SSID1":"[^"]*"' | cut -d':' -f2 | tr -d '"')
+realtime_time=$(echo "$response" | grep -o '"realtime_time":"[^"]*"' | cut -d':' -f2 | tr -d '"')
+
+# 转换开机时长（秒）为小时和分钟
+hours=$((realtime_time / 3600))
+minutes=$(((realtime_time % 3600) / 60))
+
 
 case "$network_provider" in
   "China Unicom") network_provider="中国联通" ;;
@@ -85,9 +95,17 @@ else
   echo -e "${CYAN}网络开关: ${RED}关闭${NC}"
 fi
 
+echo -e "${CYAN}局域网IP地址: ${YELLOW}$lan_ipaddr${NC}"
+echo -e "${CYAN}SSID名称: ${YELLOW}$SSID1${NC}"
+echo -e "${CYAN}开机时长: ${YELLOW}${hours}小时 ${minutes}分钟${NC}"
+
 cr_version=$(echo "$response" | grep -o '"cr_version":"[^"]*"' | cut -d':' -f2 | tr -d '"')
 hw_version=$(echo "$response" | grep -o '"hw_version":"[^"]*"' | cut -d':' -f2 | tr -d '"')
-echo -e "${CYAN}软硬件版本: ${YELLOW}${cr_version} / ${hw_version}${NC}"
+
+# 显示前15位软件版本
+cr_version_short=${cr_version:0:15}  # 截取前15位
+
+echo -e "${CYAN}软硬件版本: ${YELLOW}${cr_version_short} / ${hw_version}${NC}"
 
 # 提供选择菜单
 echo -e "\n${GREEN}请选择操作:${NC}"
