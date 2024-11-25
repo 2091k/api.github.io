@@ -8,6 +8,16 @@ BLUE='\033[1;34m'
 CYAN='\033[1;36m'
 NC='\033[0m' # 无颜色
 
+# 打印分割线
+print_line() {
+  echo -e "${CYAN}=================================================${NC}"
+}
+
+# 打印分割线
+print_line2() {
+  echo -e "${CYAN}-------------------------------------------------${NC}"
+}
+
 # 定义登录密码的 Base64 编码
 encoded_password="YWRtaW4="  # admin 的 Base64 编码
 
@@ -16,10 +26,13 @@ curl -s -X POST 'http://m.home/reqproc/proc_post' \
   -H 'User-Agent: Mozilla/5.0 (Linux; Android 14; Generic Android Build) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.102 Mobile Safari/537.36' \
   -H 'Content-Type: application/x-www-form-urlencoded; charset=UTF-8' \
   --data-urlencode 'goformId=LOGIN' \
-  --data-urlencode "password=$encoded_password" > /dev/null
+  --data-urlencode "password=$encoded_password" > /dev/null 
 
 echo -e "${GREEN}登录成功！正在获取设备信息...${NC}"
 echo
+
+print_line
+echo -e "${GREEN}设备信息${NC}"
 
 # 获取设备信息
 response=$(curl -s 'http://m.home/reqproc/proc_get?multi_data=1&cmd=network_provider,lte_band,lte_rsrp,imei,ziccid,battery_pers,battery_charging,sta_count,wifi_cur_state,data_volume_limit_switch,cr_version,hw_version,lan_ipaddr,SSID1,realtime_time,WPAPSK1_encode,LocalDomain')
@@ -29,17 +42,22 @@ if [ -z "$response" ]; then
   exit 1
 fi
 
-# 提取字段并显示
+# 提取字段
 network_provider=$(echo "$response" | grep -o '"network_provider":"[^"]*"' | cut -d':' -f2 | tr -d '"')
 lte_rsrp=$(echo "$response" | grep -o '"lte_rsrp":"[^"]*"' | cut -d':' -f2 | tr -d '"')
 lte_band=$(echo "$response" | grep -o '"lte_band":"[^"]*"' | cut -d':' -f2 | tr -d '"')
-
-# 提取并显示局域网IP地址、域名，SSID名称，密码和开机时长
 lan_ipaddr=$(echo "$response" | grep -o '"lan_ipaddr":"[^"]*"' | cut -d':' -f2 | tr -d '"')
 LocalDomain=$(echo "$response" | grep -o '"LocalDomain":"[^"]*"' | cut -d':' -f2 | tr -d '"')
 SSID1=$(echo "$response" | grep -o '"SSID1":"[^"]*"' | cut -d':' -f2 | tr -d '"')
 WPAPSK1_encode=$(echo "$response" | grep -o '"WPAPSK1_encode":"[^"]*"' | cut -d':' -f2 | tr -d '"')
 realtime_time=$(echo "$response" | grep -o '"realtime_time":"[^"]*"' | cut -d':' -f2 | tr -d '"')
+wifi_cur_state=$(echo "$response" | grep -o '"wifi_cur_state":"[^"]*"' | cut -d':' -f2 | tr -d '"')
+sta_count=$(echo "$response" | grep -o '"sta_count":"[^"]*"' | cut -d':' -f2 | tr -d '"')
+cr_version=$(echo "$response" | grep -o '"cr_version":"[^"]*"' | cut -d':' -f2 | tr -d '"')
+hw_version=$(echo "$response" | grep -o '"hw_version":"[^"]*"' | cut -d':' -f2 | tr -d '"')
+# 处理电量和充电状态
+battery_pers=$(echo "$response" | grep -o '"battery_pers":"[^"]*"' | cut -d':' -f2 | tr -d '"')
+battery_charging=$(echo "$response" | grep -o '"battery_charging":"[^"]*"' | cut -d':' -f2 | tr -d '"')
 
 # 解码 WiFi 密码
 decoded_password=$(echo "$WPAPSK1_encode" | base64 -d 2>/dev/null)
@@ -62,15 +80,9 @@ esac
 signal_strength="${lte_rsrp}dBm"
 band="B${lte_band}"
 
-# 显示运营商和信号强度信息
-echo -e "${CYAN}运营商: ${YELLOW}${network_provider} ${signal_strength} ${band}${NC}"
+print_line2
 
-echo -e "${CYAN}ICCID: ${YELLOW}$(echo "$response" | grep -o '"ziccid":"[^"]*"' | cut -d':' -f2 | tr -d '"')${NC}"
-echo -e "${CYAN}IMEI: ${YELLOW}$(echo "$response" | grep -o '"imei":"[^"]*"' | cut -d':' -f2 | tr -d '"')${NC}"
 
-# 处理电量和充电状态
-battery_pers=$(echo "$response" | grep -o '"battery_pers":"[^"]*"' | cut -d':' -f2 | tr -d '"')
-battery_charging=$(echo "$response" | grep -o '"battery_charging":"[^"]*"' | cut -d':' -f2 | tr -d '"')
 
 if [ "$battery_charging" = "1" ]; then
   battery_status="充电中"
@@ -86,36 +98,38 @@ case "$battery_pers" in
   *) battery_pers="未知" ;;
 esac
 
+
+# 显示前15位软件版本
+cr_version_short=${cr_version:0:15}  # 截取前15位
+
+
+# 显示运营商和信号强度信息
+echo -e "${CYAN}运营商: ${YELLOW}${network_provider} ${signal_strength} ${band}${NC}"
+
+echo -e "${CYAN}ICCID: ${YELLOW}$(echo "$response" | grep -o '"ziccid":"[^"]*"' | cut -d':' -f2 | tr -d '"')${NC}"
+echo -e "${CYAN}IMEI: ${YELLOW}$(echo "$response" | grep -o '"imei":"[^"]*"' | cut -d':' -f2 | tr -d '"')${NC}"
 # 显示电量信息
 if [ -n "$battery_status" ]; then
   echo -e "${CYAN}电量: ${YELLOW}${battery_status}  ${battery_pers}${NC}"
 else
   echo -e "${CYAN}电量: ${YELLOW}${battery_pers}${NC}"
 fi
-
-sta_count=$(echo "$response" | grep -o '"sta_count":"[^"]*"' | cut -d':' -f2 | tr -d '"')
 echo -e "${CYAN}已连接设备: ${YELLOW}${sta_count} 台${NC}"
 
-wifi_cur_state=$(echo "$response" | grep -o '"wifi_cur_state":"[^"]*"' | cut -d':' -f2 | tr -d '"')
+
 if [ "$wifi_cur_state" = "1" ]; then
   echo -e "${CYAN}网络开关: ${GREEN}开启${NC}"
 else
   echo -e "${CYAN}网络开关: ${RED}关闭${NC}"
 fi
-
 echo -e "${CYAN}局域网域名: ${YELLOW}$LocalDomain${NC}"
 echo -e "${CYAN}局域网IP地址: ${YELLOW}$lan_ipaddr${NC}"
 echo -e "${CYAN}SSID名称: ${YELLOW}$SSID1${NC}"
 echo -e "${CYAN}SSID密码: ${YELLOW}$decoded_password${NC}"
 echo -e "${CYAN}开机时长: ${YELLOW}${hours}小时 ${minutes}分钟${NC}"
-
-cr_version=$(echo "$response" | grep -o '"cr_version":"[^"]*"' | cut -d':' -f2 | tr -d '"')
-hw_version=$(echo "$response" | grep -o '"hw_version":"[^"]*"' | cut -d':' -f2 | tr -d '"')
-
-# 显示前15位软件版本
-cr_version_short=${cr_version:0:15}  # 截取前15位
-
 echo -e "${CYAN}软硬件版本: ${YELLOW}${cr_version_short} / ${hw_version}${NC}"
+
+print_line
 
 # 提供选择菜单
 echo -e "\n${GREEN}请选择操作:${NC}"
