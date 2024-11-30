@@ -35,7 +35,7 @@ print_line
 echo -e "${GREEN}设备信息${NC}"
 
 # 获取设备信息
-response=$(curl -s 'http://m.home/reqproc/proc_get?multi_data=1&cmd=network_provider,lte_band,lte_rsrp,imei,ziccid,battery_pers,battery_charging,sta_count,wifi_cur_state,data_volume_limit_switch,cr_version,hw_version,lan_ipaddr,SSID1,realtime_time,WPAPSK1_encode,LocalDomain')
+response=$(curl -s 'http://m.home/reqproc/proc_get?multi_data=1&cmd=network_provider,lte_band,lte_rsrp,imei,ziccid,battery_pers,battery_charging,sta_count,wifi_cur_state,data_volume_limit_switch,cr_version,hw_version,lan_ipaddr,SSID1,realtime_time,WPAPSK1_encode,LocalDomain,wan_ipaddr,ipv6_wan_ipaddr')
 
 if [ -z "$response" ]; then
   echo -e "${RED}未能获取设备信息，请检查网络或设备状态。${NC}"
@@ -55,6 +55,9 @@ wifi_cur_state=$(echo "$response" | grep -o '"wifi_cur_state":"[^"]*"' | cut -d'
 sta_count=$(echo "$response" | grep -o '"sta_count":"[^"]*"' | cut -d':' -f2 | tr -d '"')
 cr_version=$(echo "$response" | grep -o '"cr_version":"[^"]*"' | cut -d':' -f2 | tr -d '"')
 hw_version=$(echo "$response" | grep -o '"hw_version":"[^"]*"' | cut -d':' -f2 | tr -d '"')
+wan_ipaddr=$(echo "$response" | grep -o '"wan_ipaddr":"[^"]*"' | cut -d':' -f2 | tr -d '"')
+ipv6_wan_ipaddr=$(echo "$response" | grep -o '"ipv6_wan_ipaddr":"[^"]*"' | sed 's/"ipv6_wan_ipaddr":"\([^"]*\)"/\1/')
+
 # 处理电量和充电状态
 battery_pers=$(echo "$response" | grep -o '"battery_pers":"[^"]*"' | cut -d':' -f2 | tr -d '"')
 battery_charging=$(echo "$response" | grep -o '"battery_charging":"[^"]*"' | cut -d':' -f2 | tr -d '"')
@@ -124,6 +127,8 @@ else
 fi
 echo -e "${CYAN}局域网域名: ${YELLOW}$LocalDomain${NC}"
 echo -e "${CYAN}局域网IP地址: ${YELLOW}$lan_ipaddr${NC}"
+echo -e "${CYAN}WAN IP: ${YELLOW}$wan_ipaddr${NC}"
+echo -e "${CYAN}WAN IPV6: ${YELLOW}$ipv6_wan_ipaddr${NC}"
 echo -e "${CYAN}SSID名称: ${YELLOW}$SSID1${NC}"
 echo -e "${CYAN}SSID密码: ${YELLOW}$decoded_password${NC}"
 echo -e "${CYAN}开机时长: ${YELLOW}${hours}小时 ${minutes}分钟${NC}"
